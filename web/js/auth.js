@@ -72,30 +72,25 @@ authForm.addEventListener("submit", (e) => {
     body: JSON.stringify(jsonData),
   })
     .then((response) => {
-      if (response.redirected) {
-        // Handle server-side redirection
-        window.location.href = response.url;
-      } else {
-        return response.text().then((text) => {
-          try {
-            return JSON.parse(text);
-          } catch (error) {
-            throw new Error(text);
-          }
+      if (!response.ok) {
+        return response.json().then((data) => {
+          throw new Error(data.error || "Unknown error");
         });
       }
+      return response.json();
     })
     .then((data) => {
-      if (data.error) {
-        throw new Error(data.error);
+      if (data.redirect) {
+        window.location.href = data.redirect;
+      } else {
+        logMessage.style.backgroundColor = "#030ea183";
+        logMessage.textContent = `Added ID: ${data.id} - ${data.email}`;
+        logMessage.style.display = "block"; // Show log message
       }
-      logMessage.style.backgroundColor = "#030ea183";
-      logMessage.textContent = `Added ID: ${data.id} - ${data.email}`;
-      logMessage.style.display = "block"; // Show log message
     })
     .catch((error) => {
       console.error("Error:", error);
-      logMessage.textContent = `1Error: ${error.message}`; // Update on error
+      logMessage.textContent = `Error: ${error.message}`; // Update on error
       logMessage.style.display = "block"; // Show log message
       logMessage.style.backgroundColor = "#a103038e";
     });
