@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="icon" href="/ico/books.ico" type="image/x-icon">
+</head>
+
+<body>
+    <div class="container">
+        <h2>Welcome</h2>
+        <h3 style="text-align: center;">You have successfully logged in!</h3>
+        <a href="#" id="logoutBtn" class="btn" style="display: block; text-align: center; margin: 0 auto; color: #4ff040;">Logout</a>
+    </div>
+
+    <script>
+        document.getElementById('logoutBtn').addEventListener('click', function (event) {
+            event.preventDefault();
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '/auth';
+                } else {
+                    console.error('Logout failed');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+
+</html>
