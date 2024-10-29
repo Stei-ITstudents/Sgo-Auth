@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-auth/internal/config"
@@ -13,6 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 const (
@@ -68,90 +71,140 @@ func generateJWTAndSetCookie(ctx *fiber.Ctx, cfg *config.Config, userID uint) er
 	return nil
 }
 
-func Register(ctx *fiber.Ctx) error {
-	data, err := parseRequestBody(ctx)
-	if err != nil {
-		return sendErrorResponse(ctx, fiber.StatusBadRequest, "Invalid request body", err)
+// HandleErr sends a JSON error response with a status code, message, and optional error details.
+func HandleErr(ctx *fiber.Ctx, status int, message string, err error) error {
+	response := fiber.Map{
+		"error":   message,
+		"status":  status,
+		"details": nil,
 	}
 
-	if err := checkUserExists(ctx, data["email"]); err != nil {
+	if err != nil {
+		logrus.Error(err)
+		response["details"] = err.Error()
+	}
+
+	if jsonErr := ctx.Status(status).JSON(response); jsonErr != nil {
+		logrus.Error("Failed to send JSON response: ", jsonErr)
+
+		return fmt.Errorf("failed to send JSON response: %w", jsonErr)
+	}
+
+	return nil
+}
+
+func checkUserExists(email string) (bool, error) {
+	var existingUser models.User
+	err := database.GetDB().Where("email = ?", email).First(&existingUser).Error
+
+	if err == nil {
+		logrus.Warn("Email already exists: ", email)
+
+		return true, nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		logrus.Error("Error checking if user exists: ", err)
+
+		return false, err
+	}
+
+	return false, nil
+}
+
+func createUser(user *models.User) error {
+	err := database.GetDB().Create(user).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			logrus.Warn("Duplicate entry error: ", err)
+
+			return errors.New("email already exists")
+		}
+
 		return err
 	}
 
-	password, err := bcrypt.GenerateFromPassword([]byte(data["password"]), BcryptCost)
+	return nil
+}
+
+func Register(ctx *fiber.Ctx) error {
+	data, err := parseRequestBody(ctx)
 	if err != nil {
-		return sendErrorResponse(ctx, fiber.StatusInternalServerError, "Internal Server Error", err)
+		logrus.Error("Invalid request body: ", err)
+
+		return HandleErr(ctx, fiber.StatusBadRequest, "Invalid request body", err)
 	}
 
+	// Check if the user already exists
+	exists, err := checkUserExists(data["email"])
+	if err != nil {
+		logrus.Error("Error checking if user exists: ", err)
+
+		return HandleErr(ctx, fiber.StatusInternalServerError, "Internal Server Error", err)
+	}
+
+	if exists {
+		logrus.Warn("Email already exists: ", data["email"])
+
+		return HandleErr(ctx, fiber.StatusConflict, "Email already exists", nil)
+	}
+
+	// Generate hashed password
+	password, err := bcrypt.GenerateFromPassword([]byte(data["password"]), BcryptCost)
+	if err != nil {
+		logrus.Error("Password generation failed: ", err)
+
+		return HandleErr(ctx, fiber.StatusInternalServerError, "Internal Server Error", err)
+	}
+
+	// Create new user
 	user := models.User{
-		ID:       0,
 		Name:     data["name"],
 		Email:    data["email"],
 		Password: password,
 	}
+	if err := createUser(&user); err != nil {
+		logrus.Error("User creation failed: ", err)
 
-	if err := createUser(ctx, &user); err != nil {
-		return err
+		return HandleErr(ctx, fiber.StatusConflict, "Email already exists", err)
 	}
+
+	logrus.Infof("User registered with ID: %d", user.ID)
 
 	if err := ctx.JSON(user); err != nil {
-		return sendErrorResponse(ctx, fiber.StatusInternalServerError, "Failed to send JSON response", err)
+		return fmt.Errorf("failed to send JSON response: %w", err)
 	}
 
-	return nil
-}
-
-func sendErrorResponse(ctx *fiber.Ctx, status int, message string, err error) error {
-    if jsonErr := ctx.Status(status).JSON(fiber.Map{"error": message}); jsonErr != nil {
-        return fmt.Errorf("failed to send JSON response: %w", jsonErr)
-    }
-    return fmt.Errorf("%s", message)
-}
-
-func checkUserExists(ctx *fiber.Ctx, email string) error {
-	var existingUser models.User
-	if err := database.GetDB().Where("email = ?", email).First(&existingUser).Error; err == nil {
-		return sendErrorResponse(ctx, fiber.StatusBadRequest, "Email already exists", nil)
-	}
-	return nil
-}
-
-func createUser(ctx *fiber.Ctx, user *models.User) error {
-	if err := database.GetDB().Create(user).Error; err != nil {
-		return sendErrorResponse(ctx, fiber.StatusInternalServerError, "Internal Server Error", err)
-	}
 	return nil
 }
 
 func Login(ctx *fiber.Ctx, cfg *config.Config) error {
 	data, err := parseRequestBody(ctx)
 	if err != nil {
-		return fmt.Errorf("invalid request body: %w",
-			ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"}))
+		return HandleErr(ctx, fiber.StatusBadRequest, "Invalid request body", err)
 	}
 
 	var user models.User
 
 	if err := database.GetDB().Where("email = ?", data["email"]).First(&user).Error; err != nil || user.ID == 0 {
-		return fmt.Errorf("user not found: %w",
-			ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"}))
+		return HandleErr(ctx, fiber.StatusNotFound, "User not found", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(data["password"])); err != nil {
-		return fmt.Errorf("incorrect password: %w",
-			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Incorrect password"}))
+		// Log the detailed error for debugging purposes
+		logrus.Errorf("Password comparison failed: %v", err)
+		// Return a generic error message to the user
+		return HandleErr(ctx, fiber.StatusUnauthorized, "Incorrect Password", nil)
 	}
 
 	if err := generateJWTAndSetCookie(ctx, cfg, user.ID); err != nil {
-		return fmt.Errorf("failed to generate JWT and set cookie: %w", err)
+		return HandleErr(ctx, fiber.StatusInternalServerError, "Failed to generate JWT and set cookie", err)
 	}
 
-	if err := ctx.JSON(fiber.Map{"message": "success"}); err != nil {
+	// Return success message and indicate redirection
+	if err := ctx.JSON(fiber.Map{
+		"message":  "success",
+		"redirect": "/index.html",
+	}); err != nil {
 		return fmt.Errorf("failed to send JSON response: %w", err)
-	}
-
-	if err := ctx.Redirect("/index.html"); err != nil {
-		return fmt.Errorf("failed to redirect: %w", err)
 	}
 
 	return nil
