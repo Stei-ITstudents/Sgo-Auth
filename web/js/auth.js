@@ -55,6 +55,8 @@ switchFormBtn.addEventListener("click", () => {
   }
 });
 
+// Existing code...
+
 authForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const url = isLogin ? "/login" : "/register";
@@ -95,3 +97,30 @@ authForm.addEventListener("submit", (e) => {
       logMessage.style.backgroundColor = "#a103038e";
     });
 });
+
+// Add the logout function
+async function logout() {
+  try {
+    const response = await fetch("http://localhost:8000/logout", {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Unknown error");
+    }
+
+    const data = await response.json();
+    console.log("Logout successful:", data);
+    window.location.href = "/auth";
+  } catch (error) {
+    console.error("Error during logout:", error);
+  }
+}
+
+// Example usage: Attach the logout function to a button click event
+document.getElementById("logoutBtn").addEventListener("click", logout);

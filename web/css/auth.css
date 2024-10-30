@@ -1,5 +1,5 @@
 body {
-font-family: Oxanium, Roboto Mono, Orbitron, Goldman, "Chakra Petch";
+  font-family: Oxanium, Roboto Mono, Orbitron, Goldman, "Chakra Petch";
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -230,24 +230,24 @@ input[type="password"]:hover {
 }
 
 .google-btn:hover {
-  /* background-color: #b91c1c;
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); */
+  background-color: #b91c1c;
+  transform: translateY(+2px) scaleX(1.02);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  border-color: #f4f8fc;
+  border: 1px solid #ffffff;
 }
 
 .github-btn {
   background-color: #4b5563;
   transition: all 0.2s ease;
-
 }
 
 .github-btn:hover {
   background-color: #00000080;
-  /* box-shadow: 0 0 15px rgba(75, 85, 99, 0.5); */
   transform: translateY(+2px) scaleX(1.02);
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
   border-color: #f4f8fc;
   border: 1px solid #ffffff;
-
 }
 
 .facebook-btn {
@@ -255,8 +255,11 @@ input[type="password"]:hover {
 }
 
 .facebook-btn:hover {
-  /* background-color: #1d4ed8;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); */
+  background-color: #1d4ed8;
+  transform: translateY(+2px) scaleX(1.02);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  border-color: #f4f8fc;
+  border: 1px solid #ffffff;
 }
 
 .switch-form {
@@ -326,6 +329,3 @@ h2:hover {
     transform: translate(-100px, 100px) rotate(-45deg);
   }
 } */
-hi {
-  color: #030ea183;
-}
