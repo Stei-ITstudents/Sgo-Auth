@@ -26,7 +26,8 @@ func generateJWTAndSetCookie(ctx *fiber.Ctx, cfg *config.Config, userID uint) er
 
 	logrus.Infof("Generated token: %s", token)
 
-	cookie := fiber.Cookie{
+	// Set the JWT cookie
+	jwtCookie := fiber.Cookie{
 		Name:     "jwt",
 		Value:    token,
 		Expires:  time.Now().Add(TokenED),
@@ -34,7 +35,17 @@ func generateJWTAndSetCookie(ctx *fiber.Ctx, cfg *config.Config, userID uint) er
 		MaxAge:   int(TokenED.Seconds()),
 		Secure:   true,
 	}
-	ctx.Cookie(&cookie)
+	ctx.Cookie(&jwtCookie)
+
+	// // Set the session cookie
+	// sessionCookie := fiber.Cookie{
+	// 	Name:     "session",
+	// 	Value:    token,
+	// 	Expires:  time.Now().Add(TokenED),
+	// 	HTTPOnly: true,
+	// 	Secure:   true,
+	// }
+	// ctx.Cookie(&sessionCookie)
 
 	return nil
 }

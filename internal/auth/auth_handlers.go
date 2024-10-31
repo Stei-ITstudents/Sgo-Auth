@@ -82,17 +82,52 @@ func Login(ctx *fiber.Ctx, cfg *config.Config) error {
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(data["password"])); err != nil {
-		// Log the detailed error for debugging purposes
 		logrus.Errorf("Password comparison failed: %v", err)
-		// Return a generic error message to the user
+
 		return HandleErr(ctx, fiber.StatusUnauthorized, "Incorrect Password", nil)
 	}
+
+	// Update the user's JWT token and auth method
+	user.AccessToken = []byte(ctx.Cookies("jwt"))
+	if user.AuthMethod == "" {
+		user.AuthMethod = "jwt"
+	}
+
+	// Save the updated user information in the database.
+	if err := database.GetDB().Save(&user).Error; err != nil {
+		logrus.Errorf("Failed to save user data: %v", err)
+
+		return HandleErr(ctx, fiber.StatusInternalServerError, "Failed to save user data", err)
+	}
+
+	// ctx.Cookie(&fiber.Cookie{Name: "auth_method", Value: "jwt"})
+	// ctx.Cookie(&fiber.Cookie{Name: "user_id", Value: strconv.FormatUint(uint64(user.ID), 10)})
+	// ctx.Cookie(&fiber.Cookie{Name: "user_email", Value: user.Email})
+
+	// Set the auth method and user ID in the context.
+	// ctx.Locals("auth_method", "jwt")
+	// ctx.Locals("user_id", user.ID)
+	// ctx.Locals("user_email", user.Email)
 
 	if err := generateJWTAndSetCookie(ctx, cfg, user.ID); err != nil {
 		return HandleErr(ctx, fiber.StatusInternalServerError, "Failed to generate JWT and set cookie", err)
 	}
 
-	// Return success message and indicate redirection
+	logrus.Infof("------ Login User.struct Debug ------")
+	logrus.Infof("User logged in with ID: %d", user.ID)
+	// logrus.Infof("%+v", fiber.Cookie{Name: "session", Value: "session_value"})
+	logrus.Infof("Email: %s", user.Email)
+	logrus.Infof("JWT: %s", user.AccessToken)
+	logrus.Infof("Auth method: %s", user.AuthMethod)
+	logrus.Infof("------ ctx.Cookies Debug ------")
+	logrus.Infof("User logged in with ID: %s", ctx.Cookies("user_id"))
+	// logrus.Infof("session: %s", ctx.Cookies("session")) // TODO unable to retrieve session value
+	logrus.Infof("Email: %s", ctx.Cookies("user_email"))
+	logrus.Infof("JWT: %s", ctx.Cookies("jwt"))
+	logrus.Infof("Auth method: %s", ctx.Cookies("auth_method"))
+	logrus.Infof("------ Mysql Debug ------")
+	logrus.Infof("")
+
 	if err := ctx.JSON(fiber.Map{
 		"message":  "success",
 		"redirect": "/index.html",
@@ -135,14 +170,32 @@ func HandleLogoutByAuthMethod(ctx *fiber.Ctx, cfg *config.Config, authMethod int
 }
 
 func Logout(ctx *fiber.Ctx, cfg *config.Config) error {
-	authMethod := ctx.Locals("auth_method")
-	if authMethod == nil {
-		logrus.Warn("auth_method not set in context, proceeding with logout")
+	logrus.Infof("------ Logout ------")
+
+	userEmail := ctx.Cookies("user_email")
+	logrus.Infof("DB Email: %v", userEmail)
+
+	var user models.User
+
+	authMethod := ctx.Cookies("auth_method")
+	logrus.Infof("DB Auth method: %s", authMethod)
+
+	// Retrieve the session value
+	session := ctx.Cookies("session")
+	logrus.Infof("Session value: %s", session)
+
+	if err := database.GetDB().Where("email = ?", userEmail).First(&user).Error; err != nil {
+		logrus.Errorf("User not found during logout: %v", err)
+
+		return HandleErr(ctx, fiber.StatusNotFound, "User not found", err)
 	}
 
-	logrus.Infof("Logout initiated for auth method: %v", authMethod)
+	if authMethod == "" {
+		logrus.Warn("auth_method not set in context, proceeding with logout")
+	} else {
+		logrus.Infof("Logout initiated for auth method: %v", authMethod)
+	}
 
-	// Step 1: Retrieve the JWT Token from Cookies
 	jwtToken := ctx.Cookies("jwt")
 	if jwtToken == "" {
 		logrus.Warn("JWT token not found in cookies, cannot proceed with logout")
@@ -151,9 +204,6 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error {
 			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "JWT token not found"}))
 	}
 
-	logrus.Infof("JWT token found: %s", jwtToken)
-
-	// Clear the JWT cookie
 	ctx.Cookie(&fiber.Cookie{
 		Name:     "jwt",
 		Value:    "",
@@ -163,18 +213,33 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error {
 	})
 	logrus.Info("JWT cookie cleared")
 
-	// Call the appropriate HandleLogout function based on the auth method
-	if err := HandleLogoutByAuthMethod(ctx, cfg, authMethod); err != nil {
-		return err
+	if authMethod != "" {
+		if err := HandleLogoutByAuthMethod(ctx, cfg, authMethod); err != nil {
+			return err
+		}
+	} else {
+		logrus.Warn("No auth method provided, skipping specific logout handling")
 	}
 
-	// Optionally: Log the logout action
-	userID := ctx.Locals("user_id")
-	if userID != nil {
-		logrus.Infof("User with ID %v logged out.", userID)
+	logrus.Infof("JWT token found: %s", jwtToken)
+	logrus.Infof("session: %s", session) // Log the session value
+
+	if authMethod != "" {
+		logrus.Infof("Auth method: %s", authMethod)
 	}
 
-	// Redirect to the authentication page
+	// Clear the auth method and access token
+	user.AuthMethod = ""
+	user.AccessToken = nil
+	user.IsActive = false
+
+	// Save the updated user information
+	if err := database.GetDB().Save(&user).Error; err != nil {
+		logrus.Errorf("Failed to clear user data during logout: %v", err)
+
+		return HandleErr(ctx, fiber.StatusInternalServerError, "Failed to clear user data", err)
+	}
+
 	if err := ctx.Redirect("/auth"); err != nil {
 		logrus.Error("Failed to redirect: ", err)
 
@@ -182,9 +247,15 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error {
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to redirect"}))
 	}
 
-	logrus.Info("Logout process completed successfully")
-
 	return nil
 }
 
-// return fmt.Errorf %w ctx.Status(fiber.Status).JSON(fiber.Map{}
+/* return fmt.Errorf %w ctx.Status(fiber.Status).JSON(fiber.Map{}
+    dont delete this.
+	logrus.Infof("------ Logout Process Debug ------")
+	logrus.Infof("User id: %v", userID)
+	logrus.Infof("Email: %v", userEmail)
+	logrus.Infof("JWT token found: %s", jwtToken)
+	logrus.Infof("Auth method: %s", authMethod)
+	logrus.Infof("sesion: %s", ctx.Cookies("session"))
+*/

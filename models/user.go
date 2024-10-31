@@ -10,7 +10,7 @@ type User struct {
 	Role              string    `gorm:"size:50"         json:"role"`
 	UserID            string    `gorm:"size:255"        json:"userId"`
 	AuthMethod        string    `gorm:"size:50"         json:"authMethod"`
-	AccessToken       []byte    `gorm:"size:255"        json:"-"`
+	AccessToken       []byte    `gorm:"size:255"        json:"accessToken"`
 	RefreshToken      []byte    `gorm:"size:255"        json:"-"`
 	ClientID          string    `gorm:"size:255"        json:"clientId"`
 	IPAddress         string    `gorm:"size:45"         json:"-"`

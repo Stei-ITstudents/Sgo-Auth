@@ -67,7 +67,7 @@ func HandleFacebookLogin(ctx *fiber.Ctx, cfg *config.Config) error {
 	facebookOauthConfig := &oauth2.Config{
 		ClientID:     cfg.OAuth.FacebookClientID,
 		ClientSecret: cfg.OAuth.FacebookClientSecret,
-		RedirectURL:  "http://localhost:3000/auth/facebook/callback",
+		RedirectURL:  "http://localhost:8000/auth/facebook/callback",
 		Scopes:       []string{"email"},
 		Endpoint:     facebook.Endpoint,
 	}
@@ -85,7 +85,7 @@ func HandleFacebookCallback(ctx *fiber.Ctx, cfg *config.Config) error {
 	facebookOauthConfig := &oauth2.Config{
 		ClientID:     cfg.OAuth.FacebookClientID,
 		ClientSecret: cfg.OAuth.FacebookClientSecret,
-		RedirectURL:  "http://localhost:3000/auth/facebook/callback",
+		RedirectURL:  "http://localhost:8000/auth/facebook/callback",
 		Scopes:       []string{"email"},
 		Endpoint:     facebook.Endpoint,
 	}
