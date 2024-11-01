@@ -33,7 +33,6 @@ func generateJWTAndSetCookie(ctx *fiber.Ctx, cfg *config.Config, userID uint) er
 		Expires:  time.Now().Add(TokenED),
 		HTTPOnly: true,
 		MaxAge:   int(TokenED.Seconds()),
-		Secure:   true,
 	}
 	ctx.Cookie(&jwtCookie)
 
