@@ -133,5 +133,9 @@ func HandleFacebookCallback(ctx *fiber.Ctx, cfg *config.Config) error {
 		return fmt.Errorf("failed to send response: %w", err)
 	}
 
+	if err := ctx.Redirect("/index.html"); err != nil {
+		return fmt.Errorf("failed to redirect: %w", err)
+	}
+
 	return nil
 }

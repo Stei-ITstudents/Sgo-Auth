@@ -9,7 +9,7 @@ import (
 
 // Page handles the rendering of the authentication page.
 func Page(ctx *fiber.Ctx) error {
-	if err := ctx.SendFile("web/auth.html"); err != nil {
+	if err := ctx.SendFile("web/html/auth.html"); err != nil {
 		return fmt.Errorf("failed to send auth page: %w", err)
 	}
 

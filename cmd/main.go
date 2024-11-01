@@ -30,7 +30,7 @@ func main() {
 	//	logrus.Fatalf("Failed to migrate database: %v", err)
 	// }
 
-	engine := html.New("./web", ".html")
+	engine := html.New("./web/html", ".html")
 
 	// Create a new Fiber instance with template engine
 	app := fiber.New(fiber.Config{
@@ -38,7 +38,7 @@ func main() {
 	})
 
 	// Serve static files from the "web" directory
-	app.Static("/", "./web")
+	app.Static("/", "./web/html")
 	app.Static("/ico", "./web/img/ico")
 	app.Static("/css", "./web/css")
 	app.Static("/js", "./web/js")

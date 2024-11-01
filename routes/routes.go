@@ -80,6 +80,6 @@ func Setup(app *fiber.App, cfg *config.Config) {
 
 	// Serve a welcome page for authenticated users.
 	protected.Get("/welcome", func(ctx *fiber.Ctx) error {
-		return ctx.SendFile("./web/index.html")
+		return ctx.SendFile("./web/html/index.html")
 	})
 }
