@@ -6,31 +6,33 @@ import (
 	"net/http"
 
 	"github.com/go-auth/internal/config"
+	"github.com/go-auth/logrus"
 	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )
 
-func HandleGithubLogout(ctx *fiber.Ctx, cfg *config.Config) error {
+func HandleGithubLogout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- HandleGithubLogout s ---")
+
 	accessToken := ctx.Locals("access_token")
 	accessTokenStr, ok := accessToken.(string)
 
 	if !ok {
 		logrus.Error("Invalid access token type")
 
-		return fmt.Errorf("failed to send JSON response: %w",
+		return fmt.Errorf("failed to send JSON response: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid access token type"}))
 	}
 
 	revokeTokenURL := "https://api.github.com/applications/" + cfg.OAuth.GithubClientID + "/tokens/" + accessTokenStr
-	logrus.Infof("Revoking GitHub token at URL: %v", revokeTokenURL)
+	logrus.Infof("Revoking GitHub token at URL: ➽%v", revokeTokenURL)
 
 	req, err := http.NewRequestWithContext(ctx.Context(), http.MethodDelete, revokeTokenURL, nil)
 	if err != nil {
 		logrus.Error("Failed to create revoke request: ", err)
 
-		return fmt.Errorf("failed to send JSON response: %w",
+		return fmt.Errorf("failed to send JSON response: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create revoke request"}))
 	}
 
@@ -42,16 +44,16 @@ func HandleGithubLogout(ctx *fiber.Ctx, cfg *config.Config) error {
 	if err != nil {
 		logrus.Error("Failed to revoke token: ", err)
 
-		return fmt.Errorf("failed to send JSON response: %w",
+		return fmt.Errorf("failed to send JSON response: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to revoke token"}))
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
-		logrus.Errorf("Failed to revoke token, status code: %v", resp.StatusCode)
+		logrus.Errorf("Failed to revoke token, status code: ➽%v", resp.StatusCode)
 
-		return fmt.Errorf("failed to send JSON response: %w",
+		return fmt.Errorf("failed to send JSON response: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to revoke token"}))
 	}
 
@@ -60,7 +62,9 @@ func HandleGithubLogout(ctx *fiber.Ctx, cfg *config.Config) error {
 	return nil
 }
 
-func NewGithubOAuthConfig(cfg *config.Config) *oauth2.Config {
+func NewGithubOAuthConfig(cfg *config.Config) *oauth2.Config { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- NewGithubOAuthConfig s ---")
+
 	return &oauth2.Config{
 		ClientID:     cfg.OAuth.GithubClientID,
 		ClientSecret: cfg.OAuth.GithubClientSecret,
@@ -70,12 +74,14 @@ func NewGithubOAuthConfig(cfg *config.Config) *oauth2.Config {
 	}
 }
 
-func HandleGitHubLogin(ctx *fiber.Ctx, cfg *config.Config) error {
+func HandleGitHubLogin(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- HandleGitHubLogin s ---")
+
 	githubOauthConfig := NewGithubOAuthConfig(cfg)
 	url := githubOauthConfig.AuthCodeURL("state")
 
 	if err := ctx.Redirect(url); err != nil {
-		return fmt.Errorf("failed to redirect to GitHub login: %w", ctx.Status(fiber.StatusInternalServerError).SendString(
+		return fmt.Errorf("failed to redirect to GitHub login: ➽%w", ctx.Status(fiber.StatusInternalServerError).SendString(
 			"Failed to redirect to GitHub login: "+err.Error(),
 		))
 	}
@@ -85,28 +91,35 @@ func HandleGitHubLogin(ctx *fiber.Ctx, cfg *config.Config) error {
 	return nil
 }
 
-func HandleGitHubCallback(ctx *fiber.Ctx, cfg *config.Config) error {
+func HandleGitHubCallback(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- HandleGitHubCallback s ---")
+
 	githubOauthConfig := NewGithubOAuthConfig(cfg)
 	code := ctx.Query("code")
 
 	if code == "" {
-		return fmt.Errorf("failed to find code in callback request: %w", ctx.Status(fiber.StatusBadRequest).SendString(
+		return fmt.Errorf("failed to find code in callback request: ➽%w", ctx.Status(fiber.StatusBadRequest).SendString(
 			"Code not found in callback request",
 		))
 	}
 
+	logrus.Infof("Received code: %s", code)
+
 	token, err := githubOauthConfig.Exchange(ctx.Context(), code)
 	if err != nil {
-		return fmt.Errorf("failed to exchange token: %w", ctx.Status(fiber.StatusInternalServerError).SendString(
+		return fmt.Errorf("failed to exchange token: ➽%w", ctx.Status(fiber.StatusInternalServerError).SendString(
 			"Failed to exchange token: "+err.Error(),
 		))
 	}
+
+	logrus.Infof("Received token: %s", token.AccessToken)
+	logrus.Infof("Received token: %+v", token)
 
 	client := githubOauthConfig.Client(ctx.Context(), token)
 	req, err := http.NewRequestWithContext(ctx.Context(), http.MethodGet, "https://api.github.com/user", nil)
 
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", ctx.Status(fiber.StatusInternalServerError).SendString(
+		return fmt.Errorf("failed to create request: ➽%w", ctx.Status(fiber.StatusInternalServerError).SendString(
 			"Failed to create request: "+err.Error(),
 		))
 	}
@@ -114,26 +127,30 @@ func HandleGitHubCallback(ctx *fiber.Ctx, cfg *config.Config) error {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return fmt.Errorf("failed to get user info: %w", ctx.Status(fiber.StatusInternalServerError).SendString(
+		return fmt.Errorf("failed to get user info: ➽%w", ctx.Status(fiber.StatusInternalServerError).SendString(
 			"Failed to get user info: "+err.Error(),
 		))
 	}
+
+	logrus.Infof("Received response: %+v", resp)
 
 	defer resp.Body.Close()
 
 	userInfo, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read user info: %w", ctx.Status(fiber.StatusInternalServerError).SendString(
+		return fmt.Errorf("failed to read user info: ➽%w", ctx.Status(fiber.StatusInternalServerError).SendString(
 			"Failed to read user info: "+err.Error(),
 		))
 	}
 
+	logrus.Infof("Received user info: %s", userInfo)
+
 	if err := ctx.SendString("GitHub login successful: " + string(userInfo)); err != nil {
-		return fmt.Errorf("failed to send response: %w", err)
+		return fmt.Errorf("failed to send response: ➽%w", err)
 	}
 
 	if err := ctx.Redirect("/index.html"); err != nil {
-		return fmt.Errorf("failed to redirect: %w", err)
+		return fmt.Errorf("failed to redirect: ➽%w", err)
 	}
 
 	logrus.Info("GitHub login successful")

@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env/v9"
+	"github.com/go-auth/logrus"
 	"github.com/joho/godotenv"
 )
 
-type DatabaseConfig struct {
+type DatabaseConfig struct { // $➮🗝️ᐅ➽⊛
 	DBUser     string `env:"DB_USER,required"`
 	DBPassword string `env:"DB_PASSWORD,required"`
 	DBHost     string `env:"DB_HOST"              envDefault:"localhost"`
@@ -25,24 +26,21 @@ type OAuthConfig struct {
 }
 
 type Config struct {
-	Database     DatabaseConfig
-	OAuth        OAuthConfig
-	JWTSecretKey []byte
-	AccessTokens map[string][]byte
+	Database      DatabaseConfig
+	OAuth         OAuthConfig
+	JWTSecretKey  []byte
+	AccessTokens  map[string][]byte
+	AdminUsername string `env:"ADMIN_USERNAME,required"`
+	AdminEmail    string `env:"ADMIN_EMAIL,required"`
+	AdminPassword string `env:"ADMIN_PASSWORD,required"`
 }
 
-type UserSession struct {
-	UserID       string
-	AuthMethod   string
-	AccessToken  string
-	RefreshToken string
-	ClientID     string
-}
+func LoadConfig() (*Config, error) { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- LoadConfig s ---")
 
-func LoadConfig() (*Config, error) {
 	// Load .env or .secrets file
 	if err := godotenv.Load("tests/.secrets"); err != nil {
-		return nil, fmt.Errorf("error loading .secrets file: %w", err)
+		return nil, fmt.Errorf("error loading .secrets file: ➽%w", err)
 	}
 
 	cfg := &Config{
@@ -52,11 +50,11 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if err := env.Parse(&cfg.Database); err != nil {
-		return nil, fmt.Errorf("failed to parse database environment variables: %w", err)
+		return nil, fmt.Errorf("failed to parse database environment variables: ➽%w", err)
 	}
 
 	if err := env.Parse(&cfg.OAuth); err != nil {
-		return nil, fmt.Errorf("failed to parse OAuth environment variables: %w", err)
+		return nil, fmt.Errorf("failed to parse OAuth environment variables: ➽%w", err)
 	}
 
 	// Parse JWTSecretKey as string and convert to []byte
@@ -65,13 +63,14 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if err := env.Parse(&jwtSecretKey); err != nil {
-		return nil, fmt.Errorf("failed to parse JWT secret key: %w", err)
+		return nil, fmt.Errorf("failed to parse JWT secret key: ➽%w", err)
 	}
 
 	cfg.JWTSecretKey = []byte(jwtSecretKey.Key)
 
+	// Parse Admin credentials
 	if err := env.Parse(cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config environment variables: %w", err)
+		return nil, fmt.Errorf("failed to parse config environment variables: ➽%w", err)
 	}
 
 	return cfg, nil

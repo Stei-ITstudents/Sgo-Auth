@@ -6,11 +6,14 @@ import (
 	"github.com/go-auth/internal/auth"
 	"github.com/go-auth/internal/config"
 	"github.com/go-auth/internal/middleware"
+	"github.com/go-auth/logrus"
 	"github.com/gofiber/fiber/v2"
 )
 
-func Setup(app *fiber.App, cfg *config.Config) {
-	// Main route with authentication check.
+func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- Routes Setup ---")
+
+	// *Index route.
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		cookie := ctx.Cookies("jwt")
 		if cookie == "" {
@@ -20,20 +23,24 @@ func Setup(app *fiber.App, cfg *config.Config) {
 		return ctx.Redirect("/index.html")
 	})
 
-	// Publicly accessible routes.
+	// *Auth route.
 	app.Get("/auth", auth.Page)
+
+	// *Register route.
 	app.Post("/register", auth.Register)
+
+	// *Login route with cfg passed in.
 	app.Post("/login", func(ctx *fiber.Ctx) error {
 		cfg, ok := ctx.Locals("config").(*config.Config)
 		if !ok {
-			return fmt.Errorf("failed to retrieve config: %w",
+			return fmt.Errorf("failed to retrieve config: ➽%w",
 				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
 		}
 
 		return auth.Login(ctx, cfg) // Call Login with the config.
 	})
 
-	// OAuth routes with cfg passed in.
+	// *OAuth routes with cfg passed in.
 	app.Get("/auth/google", func(ctx *fiber.Ctx) error {
 		return auth.HandleGoogleLogin(ctx, cfg)
 	})
@@ -53,32 +60,58 @@ func Setup(app *fiber.App, cfg *config.Config) {
 		return auth.HandleGitHubCallback(ctx, cfg)
 	})
 
-	// JWT-protected routes with middleware.
+	// *Create user route.
+	app.Post("/user", auth.Register)
+
+	// *JWT-protect routes with middleware.
 	protected := app.Group("/", middleware.AuthMiddleware())
+
+	// *Protect direct access to index.html
+	protected.Get("/index.html", middleware.AuthMiddleware(), func(ctx *fiber.Ctx) error {
+		return ctx.SendFile("./web/html/index.html")
+	})
+
+	// *Get all users route.
 	protected.Get("/users", auth.GetUsers)
 
-	protected.Get("/user/:id", func(ctx *fiber.Ctx) error {
-		cfg, ok := ctx.Locals("config").(*config.Config)
+	// *Get User route.
+	// protected.Get("/user/:email", auth.GetUser).
+	protected.Get("/user", func(ctx *fiber.Ctx) error {
+		cfg, ok := ctx.Locals("config").(*config.Config) // Retrieve the config from the context.
 		if !ok {
-			return fmt.Errorf("failed to retrieve config: %w",
+			return fmt.Errorf("failed to retrieve config: ➽%w",
 				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
 		}
 
 		return auth.User(ctx, cfg) // Call User with the config
 	})
-	protected.Put("/user/:id", auth.UpdateUser)
-	protected.Delete("/user/:id", auth.DeleteUser)
+
+	// *Update user route.
+	protected.Put("/user", auth.UpdateUser)
+
+	// *Delete user route.
+	protected.Delete("/user", func(ctx *fiber.Ctx) error {
+		cfg, ok := ctx.Locals("config").(*config.Config)
+		if !ok {
+			return fmt.Errorf("failed to retrieve config: ➽%w",
+				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
+		}
+
+		return auth.DeleteUser(ctx, cfg)
+	})
+
+	// *Logout route.
 	protected.Post("/logout", func(ctx *fiber.Ctx) error {
 		cfg, ok := ctx.Locals("config").(*config.Config)
 		if !ok {
-			return fmt.Errorf("failed to retrieve config: %w",
+			return fmt.Errorf("failed to retrieve config: ➽%w",
 				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
 		}
 
 		return auth.Logout(ctx, cfg)
 	})
 
-	// Serve a welcome page for authenticated users.
+	// *Serve a welcome page for authenticated users.
 	protected.Get("/welcome", func(ctx *fiber.Ctx) error {
 		return ctx.SendFile("./web/html/index.html")
 	})

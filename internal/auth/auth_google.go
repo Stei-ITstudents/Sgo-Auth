@@ -7,13 +7,15 @@ import (
 	"time"
 
 	"github.com/go-auth/internal/config"
+	"github.com/go-auth/logrus"
 	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
-func HandleGoogleLogout(ctx *fiber.Ctx, _ *config.Config) error {
+func HandleGoogleLogout(ctx *fiber.Ctx, _ *config.Config) error { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- HandleGoogleLogout s ---")
+
 	// Retrieve the access token from the context
 	accessToken := ctx.Locals("access_token")
 	accessTokenStr, ok := accessToken.(string)
@@ -22,7 +24,7 @@ func HandleGoogleLogout(ctx *fiber.Ctx, _ *config.Config) error {
 	if !ok {
 		logrus.Error("Invalid access token type")
 
-		return fmt.Errorf("failed to send error response: %w",
+		return fmt.Errorf("failed to send error response: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid access token type"}))
 	}
 
@@ -33,7 +35,7 @@ func HandleGoogleLogout(ctx *fiber.Ctx, _ *config.Config) error {
 	if err != nil {
 		logrus.Error("Failed to create revoke request: ", err)
 
-		return fmt.Errorf("failed to send error response: %w",
+		return fmt.Errorf("failed to send error response: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create revoke request"}))
 	}
 
@@ -43,16 +45,16 @@ func HandleGoogleLogout(ctx *fiber.Ctx, _ *config.Config) error {
 	if err != nil {
 		logrus.Error("Failed to revoke token: ", err)
 
-		return fmt.Errorf("failed to revoke token: %w",
+		return fmt.Errorf("failed to revoke token: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to revoke token"}))
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		logrus.Errorf("Failed to revoke token, status code: %v", resp.StatusCode)
+		logrus.Errorf("Failed to revoke token, status code: ➽%v", resp.StatusCode)
 
-		return fmt.Errorf("failed to revoke token: %w",
+		return fmt.Errorf("failed to revoke token: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to revoke token"}))
 	}
 
@@ -81,7 +83,9 @@ func HandleGoogleLogout(ctx *fiber.Ctx, _ *config.Config) error {
 	return nil
 }
 
-func HandleGoogleLogin(ctx *fiber.Ctx, cfg *config.Config) error {
+func HandleGoogleLogin(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- HandleGoogleLogin s ---")
+
 	googleOauthConfig := &oauth2.Config{
 		ClientID:     cfg.OAuth.GoogleClientID,
 		ClientSecret: cfg.OAuth.GoogleClientSecret,
@@ -95,13 +99,15 @@ func HandleGoogleLogin(ctx *fiber.Ctx, cfg *config.Config) error {
 
 	url := googleOauthConfig.AuthCodeURL("state", oauth2.AccessTypeOffline)
 	if err := ctx.Redirect(url); err != nil {
-		return fmt.Errorf("failed to redirect to Google login: %w", err)
+		return fmt.Errorf("failed to redirect to Google login: ➽%w", err)
 	}
 
 	return nil
 }
 
-func HandleGoogleCallback(ctx *fiber.Ctx, cfg *config.Config) error {
+func HandleGoogleCallback(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+	logrus.Debugf("--- HandleGoogleCallback s ---")
+
 	googleOauthConfig := &oauth2.Config{
 		ClientID:     cfg.OAuth.GoogleClientID,
 		ClientSecret: cfg.OAuth.GoogleClientSecret,
@@ -116,13 +122,16 @@ func HandleGoogleCallback(ctx *fiber.Ctx, cfg *config.Config) error {
 	code := ctx.Query("code")
 	token, err := googleOauthConfig.Exchange(ctx.Context(), code)
 
+	logrus.Infof("Received code: %s", code)
+	logrus.Infof("Received token: %+v", token)
+
 	if err != nil {
 		if sendErr := ctx.Status(fiber.StatusInternalServerError).SendString(
 			"Failed to exchange token"); sendErr != nil {
-			return fmt.Errorf("failed to send error response: %w", sendErr)
+			return fmt.Errorf("failed to send error response: ➽%w", sendErr)
 		}
 
-		return fmt.Errorf("failed to exchange token: %w", err)
+		return fmt.Errorf("failed to exchange token: ➽%w", err)
 	}
 
 	client := googleOauthConfig.Client(ctx.Context(), token)
@@ -133,17 +142,21 @@ func HandleGoogleCallback(ctx *fiber.Ctx, cfg *config.Config) error {
 		nil,
 	)
 
+	logrus.Infof("Request: %+v", req)
+	logrus.Infof("Client: %+v", client)
+
 	if err != nil {
 		return fmt.Errorf(
-			"failed to create request: %w",
+			"failed to create request: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).SendString("Failed to create request"),
 		)
 	}
 
 	resp, err := client.Do(req)
+	logrus.Infof("Response: %+v", resp)
 
 	if err != nil {
-		return fmt.Errorf("failed to get user info: %w", ctx.Status(fiber.StatusInternalServerError).SendString(
+		return fmt.Errorf("failed to get user info: ➽%w", ctx.Status(fiber.StatusInternalServerError).SendString(
 			"Failed to get user info",
 		))
 	}
@@ -151,20 +164,21 @@ func HandleGoogleCallback(ctx *fiber.Ctx, cfg *config.Config) error {
 	defer resp.Body.Close()
 
 	userInfo, err := io.ReadAll(resp.Body)
+	logrus.Infof("User info: %s", userInfo)
 
 	if err != nil {
 		return fmt.Errorf(
-			"failed to read user info: %w",
+			"failed to read user info: ➽%w",
 			ctx.Status(fiber.StatusInternalServerError).SendString("Failed to read user info"),
 		)
 	}
 
 	if err := ctx.SendString("Google login successful: " + string(userInfo)); err != nil {
-		return fmt.Errorf("failed to send response: %w", err)
+		return fmt.Errorf("failed to send response: ➽%w", err)
 	}
 
 	if err := ctx.Redirect("/index.html"); err != nil {
-		return fmt.Errorf("failed to redirect: %w", err)
+		return fmt.Errorf("failed to redirect: ➽%w", err)
 	}
 
 	return nil
