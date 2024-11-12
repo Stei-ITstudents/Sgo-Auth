@@ -26,7 +26,7 @@ const (
 	RoleAdmin  = "admin"
 )
 
-func Register(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
+func Register(ctx *fiber.Ctx) error {
 	logrus.Debugf("--- Register s ---")
 
 	// *Parse request body from the context
@@ -37,15 +37,15 @@ func Register(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
 		return HandleErr(ctx, fiber.StatusBadRequest, "Invalid request body", err)
 	}
 
-	logrus.Infof("Data: ➽%+v", data)
+	logrus.Infof("Data: 🟢%+v", data)
 
 	// *Retrieve IP address and user agent.
 	ipAddress := ctx.IP()
 	userAgent := ctx.Get("User-Agent")
-	logrus.Infof("--- Registering ᐅIP Address: ➽%s ᐅUser Agent: ➽%s", ipAddress, userAgent)
+	logrus.Infof("--- Registering 🔵IP Address: 🟢%s 🔵User Agent: 🟢%s", ipAddress, userAgent)
 
 	// *Check if the user already exists
-	logrus.Infof("Checking if user exists with email: ➽%s", data["email"])
+	logrus.Infof("Checking if user exists with email: 🟢%s", data["email"])
 	exists, err := checkUserExists(data["email"])
 
 	if err != nil {
@@ -59,7 +59,7 @@ func Register(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
 	}
 
 	// *Generate hashed password.
-	logrus.Infof("Generating password for user: ➽%s", data["username"])
+	logrus.Infof("Generating password for user: 🟢%s", data["username"])
 	password, err := bcrypt.GenerateFromPassword([]byte(data["password"]), BcryptCost)
 
 	if err != nil {
@@ -90,7 +90,7 @@ func Register(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
 		return HandleErr(ctx, fiber.StatusConflict, "Email already exists", err)
 	}
 
-	logrus.InfoFields(usrsession, "User registered with ⊛Register",
+	logrus.InfoFields(usrsession, "User registered with 🟡Register",
 		"Role",
 		"Email",
 		"Name",
@@ -99,22 +99,22 @@ func Register(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
 	)
 
 	if err := ctx.JSON(usrsession); err != nil {
-		return fmt.Errorf("failed to send JSON response: ➽%w", err)
+		return fmt.Errorf("failed to send JSON response: 🟢%w", err)
 	}
 
 	return nil
 }
 
-func Login(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
-	logrus.Debugf("⊛--- Login s ---")
+func Login(ctx *fiber.Ctx, cfg *config.Config) error {
+	logrus.Debugf("🟡️--- Login s ---")
 	// *Parse request body.
 	data, err := parseRequestBody(ctx)
 	if err != nil {
 		return HandleErr(ctx, fiber.StatusBadRequest, "Invalid request body", err)
 	}
 
-	// logrus.Infof("Parsed request Body ᐅData: ➽%+v", data)
-	logrus.InfoFields(data, "Parsed request Body ᐅData: ⊛Login",
+	// logrus.Infof("Parsed request Body 🔵Data: 🟢%+v", data)
+	logrus.InfoFields(data, "Parsed request Body 🔵Data: 🔷Login",
 		"username",
 		"email",
 		"password🗝️",
@@ -133,14 +133,14 @@ func Login(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 		return HandleErr(ctx, fiber.StatusInternalServerError, "Database error", err)
 	}
 
-	// logrus.Infof("User retrieved from DB: ➽%+v", usrsession)
-	logrus.InfoFields(usrsession, "User Retrieved from DB ⊛Login",
+	// logrus.Infof("User retrieved from DB: 🟢%+v", usrsession)
+	logrus.InfoFields(usrsession, "User Retrieved from DB 🔷Login",
 		"Role",
 		"Email",
 		"Name",
 		"Provider",
 		"EmailAccessToken",
-		"RefreshToken",
+		"RefreshToken🗝️",
 		"Password🗝️",
 	)
 
@@ -151,19 +151,19 @@ func Login(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 
 	// *Validate the password.
 	if err := bcrypt.CompareHashAndPassword(usrsession.Password, []byte(data["password"])); err != nil {
-		logrus.Errorf("Password comparison failed: ➽%v", err)
+		logrus.Errorf("Password comparison failed: 🟢%v", err)
 
 		return HandleErr(ctx, fiber.StatusUnauthorized, "Incorrect Password", nil)
 	}
 
 	// *generate JWT token and set cookie
-	if err := genJWTCookie(ctx, cfg, usrsession.EmailUserID); err != nil { // Directly use EmailUserID here
+	if err := genJWTCookie(ctx, cfg, usrsession.Name); err != nil { // Directly use EmailUserID here
 		return HandleErr(ctx, fiber.StatusInternalServerError, "Failed to generate JWT and set cookie", err)
 	}
 
 	// *Update UsrSession fields
-	// logrus.Infof("JWT: ➽🗝️%s", JWT)
-	logrus.Infof("EmailAccessToken: ➽🗝️%s", usrsession.EmailAccessToken)
+	// logrus.Infof("JWT: 🟢🗝️%s", JWT)
+	logrus.Infof("EmailAccessToken: 🟢🗝️%s", usrsession.EmailAccessToken)
 
 	usrsession.RefreshToken = "Test if saving works"
 	// usrsession.RefreshToken = genRefreshTkn(usrsession.EmailUserID)
@@ -179,7 +179,7 @@ func Login(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 		return HandleErr(ctx, fiber.StatusInternalServerError, "Failed to log in", err)
 	}
 
-	logrus.InfoFields(usrsession, "User After save from DB ⊛Login",
+	logrus.InfoFields(usrsession, "User After save from DB 🔷Login",
 		"Role",
 		"Email",
 		"Name",
@@ -197,10 +197,10 @@ func Login(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 		"message":  "success",
 		"redirect": "/index.html",
 	}); err != nil {
-		return fmt.Errorf("failed to send JSON response: ➽%w", err)
+		return fmt.Errorf("failed to send JSON response: 🟢%w", err)
 	}
 
-	logrus.Debugf("--- Login e ---")
+	logrus.Debugf("🟡️--- Login e ---")
 
 	return nil
 }
@@ -228,21 +228,20 @@ func HandleLogoutByProvider(ctx *fiber.Ctx, cfg *config.Config, usrsession model
 			return err
 		}
 	case "email":
-		// Email logout logic can be implemented here if needed
-		// e.g., clear UsrSession-related cookies
-	default:
-		logrus.Warnf("Unsupported provider: ➽%v", usrsession.Provider)
 
-		return fmt.Errorf("unsupported provider: ➽%v", usrsession.Provider)
+	default:
+		logrus.Warnf("Unsupported provider: 🟢%v", usrsession.Provider)
+
+		return fmt.Errorf("unsupported provider: 🟢%v", usrsession.Provider)
 	}
 
 	return nil
 }
 
-func Logout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+func Logout(ctx *fiber.Ctx, cfg *config.Config) error {
 	logrus.Debugf("--- Logout s ---")
 
-	// Retrieve JWT from the cookie
+	// *Retrieve JWT from the cookie
 	jwtToken := ctx.Cookies("jwt")
 	if jwtToken == "" {
 		logrus.Errorf("JWT token missing in cookie")
@@ -251,8 +250,8 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing token"}))
 	}
 
-	// Parse the JWT to extract claims
-	token, err := jwt.ParseWithClaims(jwtToken, &CustomClaims{}, func(_ *jwt.Token) (interface{}, error) {
+	// *Parse the JWT to extract claims
+	token, err := jwt.ParseWithClaims(jwtToken, &models.JwtClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		return (cfg.JWTSecretKey), nil
 	})
 
@@ -264,7 +263,7 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 	}
 
 	// *Assert claims as *CustomClaims to access Subject and AuthMethod
-	claims, ok := token.Claims.(*CustomClaims)
+	claims, ok := token.Claims.(*models.JwtClaims)
 	if !ok {
 		logrus.Error("Failed to parse claims")
 
@@ -273,8 +272,8 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 	}
 
 	// *Log the subject (user ID or email) and authentication method
-	// logrus.Infof("From claims data: ➽%+v", claims
-	logrus.InfoFields(claims, "From claims data: ⊛Logout",
+	// logrus.Infof("From claims data: 🟢%+v", claims
+	logrus.InfoFields(claims, "From claims data: 🔷Logout",
 		"Issuer",
 		"Purpose",
 		"Audience",
@@ -282,7 +281,7 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 		"AuthMethod",
 	)
 
-	// Invalidate the JWT by setting its expiration to the past
+	// *Invalidate the JWT by setting its expiration to the past
 	ctx.Cookie(&fiber.Cookie{
 		Name:     "jwt",
 		Value:    "",                              // Clear the value
@@ -310,14 +309,14 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 		return HandleErr(ctx, fiber.StatusInternalServerError, "Database error", err)
 	}
 
-	// // *Clear the JWT cookie to log the user out
-	// ctx.ClearCookie("jwt")
+	// *Clear the JWT cookie to log the user out
+	ctx.ClearCookie("jwt")
 
 	// *Redirect to the login page
 	if err := ctx.Redirect("/auth"); err != nil {
 		logrus.Error("Failed to redirect: ", err)
 
-		return fmt.Errorf("failed to send JSON response: ➽%w",
+		return fmt.Errorf("failed to send JSON response: 🟢%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to redirect"}))
 	}
 
@@ -333,13 +332,3 @@ func Logout(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 
 	return nil
 }
-
-/* return fmt.Errorf ➽%w ctx.Status(fiber.Status).JSON(fiber.Map{}
-    dont delete this.
-	logrus.Debugf("-- Logout Process Debug --")
-	logrus.Infof("User id: ➽%v", userID)
-	logrus.Infof("Email: ➽%v", userEmail)
-	logrus.Infof("JWT token found: ➽%s", jwtToken)
-	logrus.Infof("Auth method: ➽%s", Provider)
-	logrus.Infof("sesion: ➽%s", ctx.Cookies("session"))
-*/

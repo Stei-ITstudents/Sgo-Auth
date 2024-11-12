@@ -6,7 +6,8 @@ A scalable authentication server built with Go and the Fiber framework, providin
 
 ## Table of Contents
 
-- [Screenshots](#screenshots)
+<!-- - [Screenshots](#screenshots) -->
+
 - [Project Structure](#project-structure)
 - [Features](#features)
 - [Setup Instructions](#setup-instructions)

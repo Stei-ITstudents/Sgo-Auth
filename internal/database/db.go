@@ -17,30 +17,30 @@ type Database struct {
 	once sync.Once
 }
 
-// Database struct contains the database instance and a sync.Once instance.
+// *Creates a new database instance.
 func NewDatabase() *Database {
 	return &Database{}
 }
 
-// Connect method returns the database instance.
-func (db *Database) Connect() (*gorm.DB, error) { // $➮🗝️ᐅ➽⊛
+// *Connects to the database.
+func (db *Database) Connect() (*gorm.DB, error) {
 	// logrus.Debugf("--- Connect s ---")
 	var err error
 
 	db.once.Do(func() {
 		cfg, err := config.LoadConfig() // Load the config file to get the database credentials.
 		if err != nil {
-			logrus.Fatalf("Failed to load config: ➽%v", err)
+			logrus.Fatalf("Failed to load config: 🟢%v", err)
 		}
 
 		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 			cfg.Database.DBUser, cfg.Database.DBPassword, cfg.Database.DBHost, cfg.Database.DBPort, cfg.Database.DBName)
 
-		logrus.Infof("Connecting to ᐅDB - DSN: ➽🗝️%s", dsn)
+		logrus.Infof("• Connecting to 🔵DB - DSN: 🟢🗝️%s", dsn)
 
 		connection, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 		if err != nil {
-			logrus.Errorf("Failed to connect to database: ➽%v", err)
+			logrus.Errorf("Failed to connect to database: 🟢%v", err)
 
 			return
 		}
@@ -48,7 +48,7 @@ func (db *Database) Connect() (*gorm.DB, error) { // $➮🗝️ᐅ➽⊛
 		db.DB = connection
 
 		if err := db.DB.AutoMigrate(&models.UsrSession{}); err != nil {
-			logrus.Errorf("Error during AutoMigrate: ➽%v", err)
+			logrus.Errorf("Error during AutoMigrate: 🟢%v", err)
 		}
 	})
 
@@ -59,14 +59,14 @@ func (db *Database) Connect() (*gorm.DB, error) { // $➮🗝️ᐅ➽⊛
 	return db.DB, err
 }
 
-// GetDB returns the database instance.
-func GetDB() *gorm.DB { // $➮🗝️ᐅ➽⊛
+// *Returns the database instance.
+func GetDB() *gorm.DB {
 	// logrus.Debugf("--- GetDB ---")
 	db := NewDatabase()
-	conn, err := db.Connect() // Get DB instance from Connect
+	conn, err := db.Connect()
 
 	if err != nil {
-		logrus.Fatalf("Failed to connect to ᐅ database: ➽%v", err)
+		logrus.Fatalf("Failed to connect to 🔵 database: 🟢%v", err)
 	}
 
 	return conn // Return the database connection

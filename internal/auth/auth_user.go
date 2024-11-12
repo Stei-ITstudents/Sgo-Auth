@@ -7,9 +7,6 @@ import (
 
 	"github.com/go-auth/internal/config"
 	"github.com/go-auth/internal/database"
-
-	// "github.com/go-auth/logrus"
-
 	"github.com/go-auth/logrus"
 	"github.com/go-auth/models"
 	"github.com/gofiber/fiber/v2"
@@ -18,22 +15,22 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateAdminUser(database *gorm.DB, adminUsername, adminEmail, password string) error { // $➮🗝️ᐅ➽⊛
+func CreateAdminUser(database *gorm.DB, adminUsername, adminEmail, password string) error {
 	logrus.Debugf("--- CreateAdminUser s ---")
 
 	// Hash the admin password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		logrus.Errorf("Failed to hash password: ➽%v", err)
+		logrus.Errorf("Failed to hash password: 🟢%v", err)
 
-		return fmt.Errorf("error hashing password: ➽%w", err)
+		return fmt.Errorf("error hashing password: 🟢%w", err)
 	}
 
 	usrsession := models.UsrSession{
 		Provider:            "email",
 		GoogleUserID:        "",
 		FacebookUserID:      "",
-		GitHubUserID:        "",
+		GitHubUserID:        0,
 		EmailUserID:         adminEmail,
 		GoogleAccessToken:   "",
 		FacebookAccessToken: "",
@@ -56,17 +53,17 @@ func CreateAdminUser(database *gorm.DB, adminUsername, adminEmail, password stri
 
 	// Save the admin user session to the database
 	if err := database.Create(&usrsession).Error; err != nil {
-		logrus.Errorf("Failed to create admin user session: ➽%v", err)
+		logrus.Warnf("• 🔴Failed to create for %s, 🔵admin ⚪user session: 🔴%v", usrsession.Name, err)
 
-		return err
+		return nil
 	}
 
-	logrus.Infof("Admin user created: ➽%s", usrsession.Email)
+	logrus.Infof("• Admin 🔵User 🟢%s ⚪created with email: 🟢%s", usrsession.Name, usrsession.Email)
 
 	return nil
 }
 
-func createUser(user *models.UsrSession) error { // $➮🗝️ᐅ➽⊛
+func createUser(user *models.UsrSession) error {
 	if exists, err := checkUserExists(user.Email); err != nil {
 		return fmt.Errorf("failed to check user existence: %w", err)
 	} else if exists {
@@ -80,7 +77,7 @@ func createUser(user *models.UsrSession) error { // $➮🗝️ᐅ➽⊛
 	return nil
 }
 
-func checkUserExists(email string) (bool, error) { // $➮🗝️ᐅ➽⊛
+func checkUserExists(email string) (bool, error) {
 	logrus.Debugf("--- checkUserExists s ---")
 
 	var existingUser models.UsrSession
@@ -101,7 +98,7 @@ func checkUserExists(email string) (bool, error) { // $➮🗝️ᐅ➽⊛
 	return false, nil // User does not exist
 }
 
-func User(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+func User(ctx *fiber.Ctx, cfg *config.Config) error {
 	logrus.Debugf("--- User s ---")
 
 	var user models.UsrSession
@@ -112,17 +109,17 @@ func User(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 		return cfg.JWTSecretKey, nil // Use cfg to access JWTSecretKey
 	})
 
-	// logrus.WithFields(logrus.ToFields(cookie)).Infof("User ᐅCookie")
+	// logrus.WithFields(logrus.ToFields(cookie)).Infof("User 🔵Cookie")
 	GetCookies(ctx, "User")
 
 	// *Extracts claims from JWT; checks validity.
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if err != nil || !ok || !token.Valid {
-		return fmt.Errorf("unauthenticated: ➽%w",
+		return fmt.Errorf("unauthenticated: 🟢%w",
 			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthenticated"}))
 	}
 
-	logrus.InfoFields(claims, "Claims from cookie JWT ⊛User",
+	logrus.InfoFields(claims, "Claims from cookie JWT 🔷User",
 		"Valid",
 		"Issuer",
 		"Subject",
@@ -134,18 +131,18 @@ func User(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 	)
 
 	// *Fetch user by email using JWT claims.Issuer from DB.
-	if err := database.GetDB().Where("email = ?", claims.Subject).First(&user).Error; err != nil {
-		return fmt.Errorf("user not found: ➽%w",
+	if err := database.GetDB().Where("name = ?", claims.Subject).First(&user).Error; err != nil {
+		return fmt.Errorf("user not found: 🟢%w",
 			ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"}))
 	}
 
-	logrus.InfoFields(user, "Fetch user, Response ⊛User",
+	logrus.InfoFields(user, "Fetch user, Response 🔷User",
 		"Name",
 		"Role",
 		"Email",
 		"IsActive",
 		"ExpiresAt",
-		"RefreshToken",
+		"RefreshToken🗝️",
 		"EmailAccessToken",
 		"TwoFactorEnabled",
 		"Password🗝️",
@@ -153,7 +150,7 @@ func User(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 
 	// *Send user as JSON response.
 	if err := ctx.JSON(user); err != nil {
-		return fmt.Errorf("failed to send JSON response: ➽%w",
+		return fmt.Errorf("failed to send JSON response: 🟢%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to send JSON response"}))
 	}
 
@@ -161,7 +158,7 @@ func User(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
 }
 
 // UpdateUser updates the user session corresponding to the provided email.
-func UpdateUser(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
+func UpdateUser(ctx *fiber.Ctx) error {
 	logrus.Debugf("--- UpdateUser s ---")
 
 	var (
@@ -171,17 +168,17 @@ func UpdateUser(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
 
 	// *Parse request body
 	if err := ctx.BodyParser(&data); err != nil {
-		return fmt.Errorf("invalid request body: ➽%w",
+		return fmt.Errorf("invalid request body: 🟢%w",
 			ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"}))
 	}
 
 	// *Retrieve the user by the Email
 	if err := database.GetDB().Where("email = ?", data["email"]).First(&usrsession).Error; err != nil {
-		return fmt.Errorf("user not found: ➽%w",
+		return fmt.Errorf("user not found: 🟢%w",
 			ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"}))
 	}
 
-	logrus.Infof("UpUsr ᐅData: ➽%+v", data)
+	logrus.Infof("UpUsr 🔵Data: 🟢%+v", data)
 
 	// *Update fields
 	usrsession.Name = data["username"]
@@ -200,7 +197,7 @@ func UpdateUser(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
 		usrsession.Password = hashedPassword
 	}
 
-	logrus.InfoFields(usrsession, "Updating to DB Data ⊛UpdateUser",
+	logrus.InfoFields(usrsession, "Updating to DB Data 🔷UpdateUser",
 		"Name",
 		"Email",
 		"Password🗝️",
@@ -217,44 +214,46 @@ func UpdateUser(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
 
 	// *Send success response.
 	if err := ctx.JSON(fiber.Map{"message": "User updated successfully"}); err != nil {
-		return fmt.Errorf("failed to send JSON response: ➽%w",
+		return fmt.Errorf("failed to send JSON response: 🟢%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to send JSON response"}))
 	}
 
 	return nil
 }
 
-func GetUsers(ctx *fiber.Ctx) error { // $➮🗝️ᐅ➽⊛
+func GetUsers(ctx *fiber.Ctx) error {
 	logrus.Debugf("--- GetUsers s ---")
 
 	var users []models.UsrSession
 
 	if err := database.GetDB().Find(&users).Error; err != nil {
-		return fmt.Errorf("failed to retrieve users: ➽%w",
+		return fmt.Errorf("failed to retrieve users: 🟢%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve users"}))
 	}
 
 	for _, user := range users {
-		logrus.InfoFields(user, "Fetch users, Response ⊛GetUsers",
+		logrus.InfoFields(user, "Fetch users, Response 🔷GetUsers",
 			"Role",
+			"Provider",
+			"Name",
 			"Email",
 			"IsActive",
 			"ExpiresAt",
-			"RefreshToken",
-			"EmailAccessToken",
+			"RefreshToken🗝️",
+			// "EmailAccessToken",
 			"Password🗝️",
 		)
 	}
 
 	if err := ctx.JSON(users); err != nil {
-		return fmt.Errorf("failed to send JSON response: ➽%w",
+		return fmt.Errorf("failed to send JSON response: 🟢%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to send JSON response"}))
 	}
 
 	return nil
 }
 
-func DeleteUser(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽⊛
+func DeleteUser(ctx *fiber.Ctx, cfg *config.Config) error {
 	logrus.Debugf("--- DeleteUser s ---")
 
 	var requestData struct {
@@ -266,18 +265,18 @@ func DeleteUser(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽
 	if err := ctx.BodyParser(&requestData); err != nil {
 		logrus.Errorf("Error parsing request body: %v", err)
 
-		return fmt.Errorf("invalid request body: ➽%w",
+		return fmt.Errorf("invalid request body: 🟢%w",
 			ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"}))
 	}
 
-	logrus.Infof("DelUsr from request ᐅData: ➽%+s", requestData)
+	logrus.Infof("DelUsr from request 🔵Data: 🟢%+s", requestData)
 
 	// *Retrieve the user by email.
 	var user models.UsrSession
 	if err := database.GetDB().Where("email = ?", requestData.Email).First(&user).Error; err != nil {
 		logrus.Errorf("User not found: %v", err)
 
-		return fmt.Errorf("user not found: ➽%w",
+		return fmt.Errorf("user not found: 🟢%w",
 			ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"}))
 	}
 
@@ -285,7 +284,7 @@ func DeleteUser(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽
 	if err := bcrypt.CompareHashAndPassword((user.Password), []byte(requestData.Password)); err != nil {
 		logrus.Errorf("Invalid password: %v", err)
 
-		return fmt.Errorf("invalid password: ➽%w",
+		return fmt.Errorf("invalid password: 🟢%w",
 			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid password"}))
 	}
 
@@ -299,7 +298,7 @@ func DeleteUser(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽
 	if err != nil || token == nil {
 		logrus.Errorf("JWT parsing error: %v", err)
 
-		return fmt.Errorf("invalid token: ➽%w",
+		return fmt.Errorf("invalid token: 🟢%w",
 			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"}))
 	}
 
@@ -308,27 +307,27 @@ func DeleteUser(ctx *fiber.Ctx, cfg *config.Config) error { // $➮🗝️ᐅ➽
 	if !ok || !token.Valid {
 		logrus.Errorf("Invalid claims or token: %v", err)
 
-		return fmt.Errorf("unauthenticated: ➽%w",
+		return fmt.Errorf("unauthenticated: 🟢%w",
 			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthenticated"}))
 	}
 
-	// // *Log the claims.
-	// if err := ParseJWT(ctx, cfg, "Del"); err != nil {
-	// 	logrus.Errorf("Failed to parse JWT: %v", err)
+	// *Log the claims.
+	if err := ParseJWT(ctx, cfg, "Del"); err != nil {
+		logrus.Errorf("Failed to parse JWT: %v", err)
 
-	// 	return fmt.Errorf("failed to parse JWT: ➽%w",
-	// 		ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Failed to parse JWT"}))
-	// }
+		return fmt.Errorf("failed to parse JWT: 🟢%w",
+			ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Failed to parse JWT"}))
+	}
 
 	// *Delete the user from the database
 	if err := database.GetDB().Where("email = ?", requestData.Email).Delete(&models.UsrSession{}).Error; err != nil {
 		logrus.Errorf("Failed to delete user: %v", err)
 
-		return fmt.Errorf("failed to delete user: ➽%w",
+		return fmt.Errorf("failed to delete user: 🟢%w",
 			ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete user"}))
 	}
 
-	logrus.Infof("User deleted successfully: ➽%s", requestData.Email)
+	logrus.Infof("User deleted successfully: 🟢%s", requestData.Email)
 
 	if err := ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "User deleted successfully"}); err != nil {
 		return fmt.Errorf("failed to send JSON response: %w", err)

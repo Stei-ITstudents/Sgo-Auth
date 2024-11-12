@@ -10,7 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
+func Setup(app *fiber.App, cfg *config.Config) {
 	logrus.Debugf("--- Routes Setup ---")
 
 	// *Index route.
@@ -33,7 +33,7 @@ func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
 	app.Post("/login", func(ctx *fiber.Ctx) error {
 		cfg, ok := ctx.Locals("config").(*config.Config)
 		if !ok {
-			return fmt.Errorf("failed to retrieve config: ➽%w",
+			return fmt.Errorf("failed to retrieve config: 🟢%w",
 				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
 		}
 
@@ -56,6 +56,7 @@ func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
 	app.Get("/auth/github", func(ctx *fiber.Ctx) error {
 		return auth.HandleGitHubLogin(ctx, cfg)
 	})
+
 	app.Get("/auth/github/callback", func(ctx *fiber.Ctx) error {
 		return auth.HandleGitHubCallback(ctx, cfg)
 	})
@@ -71,6 +72,11 @@ func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
 		return ctx.SendFile("./web/html/index.html")
 	})
 
+	// *Protect access to protected-index.html
+	protected.Get("/protected-index", middleware.AuthMiddleware(), func(ctx *fiber.Ctx) error {
+		return ctx.SendFile("./web/html/index.html")
+	})
+
 	// *Get all users route.
 	protected.Get("/users", auth.GetUsers)
 
@@ -79,7 +85,7 @@ func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
 	protected.Get("/user", func(ctx *fiber.Ctx) error {
 		cfg, ok := ctx.Locals("config").(*config.Config) // Retrieve the config from the context.
 		if !ok {
-			return fmt.Errorf("failed to retrieve config: ➽%w",
+			return fmt.Errorf("failed to retrieve config: 🟢%w",
 				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
 		}
 
@@ -93,7 +99,7 @@ func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
 	protected.Delete("/user", func(ctx *fiber.Ctx) error {
 		cfg, ok := ctx.Locals("config").(*config.Config)
 		if !ok {
-			return fmt.Errorf("failed to retrieve config: ➽%w",
+			return fmt.Errorf("failed to retrieve config: 🟢%w",
 				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
 		}
 
@@ -104,7 +110,7 @@ func Setup(app *fiber.App, cfg *config.Config) { // $➮🗝️ᐅ➽⊛
 	protected.Post("/logout", func(ctx *fiber.Ctx) error {
 		cfg, ok := ctx.Locals("config").(*config.Config)
 		if !ok {
-			return fmt.Errorf("failed to retrieve config: ➽%w",
+			return fmt.Errorf("failed to retrieve config: 🟢%w",
 				ctx.Status(fiber.StatusInternalServerError).SendString("Failed to retrieve config"))
 		}
 
